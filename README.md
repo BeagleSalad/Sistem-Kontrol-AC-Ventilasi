@@ -5,7 +5,7 @@ A simulated IoT system for monitoring the air quality of a university classroom.
 ## Included
 
 - FastAPI backend with a health check, readings, alerts, and AC-control APIs
-- SQLite storage for rooms and sensor readings
+- PostgreSQL storage for rooms and sensor readings
 - Python simulator that posts a reading every 10 seconds
 
 ## Setup
