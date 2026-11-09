@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: iaq_monitor
+      POSTGRES_USER: iaq_user
+      POSTGRES_PASSWORD: iaq_dev_password
+    ports: ["5432:5432"]
+    volumes: ["iaq_postgres_data:/var/lib/postgresql/data"]
+volumes:
+  iaq_postgres_data:

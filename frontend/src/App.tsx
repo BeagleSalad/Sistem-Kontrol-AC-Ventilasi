@@ -40,6 +40,10 @@ function MetricCard({ label, value, unit, tone = "neutral" }: { label: string; v
 }
 
 export default function App() {
+  const [token, setToken] = useState(() => sessionStorage.getItem("iaq_access_token") ?? "");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
   const [latest, setLatest] = useState<Reading | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [ac, setAc] = useState<AcState | null>(null);
@@ -48,11 +52,13 @@ export default function App() {
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!token) return;
     try {
+      const options = { headers: { Authorization: `Bearer ${token}` } };
       const [readingsResponse, alertsResponse, acResponse] = await Promise.all([
-        fetch(`${API_URL}/api/readings?limit=1`),
-        fetch(`${API_URL}/api/alerts?limit=5`),
-        fetch(`${API_URL}/api/rooms/${encodeURIComponent(ROOM_NAME)}/ac`),
+        fetch(`${API_URL}/api/readings?limit=1`, options),
+        fetch(`${API_URL}/api/alerts?limit=5`, options),
+        fetch(`${API_URL}/api/rooms/${encodeURIComponent(ROOM_NAME)}/ac`, options),
       ]);
       if (![readingsResponse, alertsResponse, acResponse].every((response) => response.ok)) {
         throw new Error("The API did not respond successfully.");
@@ -67,20 +73,21 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
+    if (!token) return;
     void refresh();
     const interval = window.setInterval(() => void refresh(), 10_000);
     return () => window.clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, token]);
 
   async function saveAc(next: AcState) {
     setSaving(true);
     try {
       const response = await fetch(`${API_URL}/api/rooms/${encodeURIComponent(ROOM_NAME)}/ac`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ is_on: next.is_on, target_temperature_c: next.target_temperature_c }),
       });
       if (!response.ok) throw new Error();
@@ -93,6 +100,19 @@ export default function App() {
   }
 
   const status = latest?.status ?? "waiting";
+  async function signIn(event: React.FormEvent) {
+    event.preventDefault();
+    setLoginError("");
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      sessionStorage.setItem("iaq_access_token", data.access_token);
+      setToken(data.access_token);
+      setPassword("");
+    } catch { setLoginError("Sign-in failed. Check your username and password."); }
+  }
+  if (!token) return <main className="login-page"><form className="login-card" onSubmit={signIn}><p className="eyebrow">Indoor air quality monitor</p><h1>Sign in</h1><p className="subtle">Use the account assigned to this classroom or an administrator account.</p><label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>{loginError && <p className="error">{loginError}</p>}<button className="power active" type="submit">Sign in</button></form></main>;
   return (
     <main>
       <header>
@@ -102,6 +122,7 @@ export default function App() {
           <p className="subtle">Academic Building A · Live Sensor Data</p>
         </div>
         <div className={`status ${status}`}><i /> {status === "waiting" ? "Waiting for data" : `Air quality: ${status}`}</div>
+        <button className="signout" onClick={() => { sessionStorage.removeItem("iaq_access_token"); setToken(""); }}>Sign out</button>
       </header>
 
       {error && <p className="error">{error}</p>}

@@ -16,6 +16,9 @@ In PowerShell, from this folder:
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+docker compose up -d
+py migrate.py
+py seed_demo.py
 ```
 
 ## Run the backend
@@ -25,6 +28,8 @@ uvicorn app.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/docs` for interactive API documentation. The health check is `GET /health`.
+
+The PostgreSQL container is configured in `docker-compose.yml`. Demo credentials are `campus-admin` / `AdminDemo123!` and `room-a101-operator` / `RoomA101Demo123!`. The simulator authenticates as the separate device `iaq-a101-01` using an API key.
 
 ## Run the simulator
 

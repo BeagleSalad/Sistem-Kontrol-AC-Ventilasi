@@ -1,4 +1,4 @@
-"""Generate realistic-enough virtual readings for Room A-101."""
+"""Generate realistic-enough virtual readings."""
 
 import json
 import random
@@ -7,12 +7,14 @@ from datetime import datetime
 from urllib import error, request
 
 API_URL = "http://127.0.0.1:8000/api/readings"
-AC_STATE_URL = "http://127.0.0.1:8000/api/rooms/Room%20A-101/ac"
+AC_STATE_URL = "http://127.0.0.1:8000/api/device/ac"
+DEVICE_ID = "iaq-a101-01"
+DEVICE_API_KEY = "iaq-a101-demo-key-change-me"
 INTERVAL_SECONDS = 10
 
 
 def get_ac_state() -> dict:
-    with request.urlopen(AC_STATE_URL, timeout=5) as response:
+    with request.urlopen(request.Request(AC_STATE_URL, headers={"X-Device-ID": DEVICE_ID, "X-API-Key": DEVICE_API_KEY}), timeout=5) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -43,7 +45,7 @@ def send_reading(reading: dict) -> None:
     http_request = request.Request(
         API_URL,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "X-Device-ID": DEVICE_ID, "X-API-Key": DEVICE_API_KEY},
         method="POST",
     )
     with request.urlopen(http_request, timeout=5) as response:
